@@ -73,7 +73,7 @@ regression-clustering-ml/
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/regression-clustering-ml.git
+   git clone https://github.com/Mtutuzeli-lab/regression-clustering-ml.git
    cd regression-clustering-ml
    ```
 
