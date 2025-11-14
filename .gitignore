@@ -77,6 +77,14 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+anaconda_projects/
+
+# Logs
+logs/
+
+# Model artifacts (optional - uncomment if you don't want to commit trained models)
+# models/
+# results/
 
 # IPython
 profile_default/

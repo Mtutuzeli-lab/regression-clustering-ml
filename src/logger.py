@@ -4,7 +4,9 @@ from datetime import datetime
 
 # Create logs directory
 LOG_FILE = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-logs_path = os.path.join(os.getcwd(), "logs")
+# Use project root directory instead of current working directory
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+logs_path = os.path.join(project_root, "logs")
 os.makedirs(logs_path, exist_ok=True)
 
 LOG_FILE_PATH = os.path.join(logs_path, LOG_FILE)
