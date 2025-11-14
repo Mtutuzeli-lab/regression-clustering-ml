@@ -275,7 +275,7 @@ This project is developed for educational and portfolio purposes.
 
 ---
 
-**Author**: Mtutuzeli Ndzaba  
+**Author**: Mtutuzeli Ngamlana  
 **Purpose**: Comprehensive Data Science Portfolio Project  
 **Technology**: Python ML/DL Stack with Enterprise Practices  
 **Last Updated**: November 2025
