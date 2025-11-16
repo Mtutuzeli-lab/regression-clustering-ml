@@ -209,3 +209,9 @@ __marimo__/
 # MLflow
 mlruns/
 mlartifacts/
+
+# TensorBoard
+logs/tensorboard/
+
+# Environment variables (contains sensitive data)
+.env

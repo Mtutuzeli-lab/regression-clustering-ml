@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Streamlit Web Application
+  streamlit-app:
+    build: .
+    container_name: ecommerce-ml-app
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+      - ./.env:/app/.env
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DATABASE=${MONGODB_DATABASE}
+      - MONGODB_COLLECTION=${MONGODB_COLLECTION}
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    restart: unless-stopped
+    networks:
+      - ml-network
+
+  # MLflow Tracking Server
+  mlflow-server:
+    build: .
+    container_name: mlflow-tracking
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./mlartifacts:/app/mlartifacts
+    command: mlflow ui --host 0.0.0.0 --port 5000
+    restart: unless-stopped
+    networks:
+      - ml-network
+
+  # TensorBoard Server
+  tensorboard-server:
+    build: .
+    container_name: tensorboard-server
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./logs:/app/logs
+    command: tensorboard --logdir=/app/logs/tensorboard --host 0.0.0.0 --port 6006
+    restart: unless-stopped
+    networks:
+      - ml-network
+
+networks:
+  ml-network:
+    driver: bridge
+
+volumes:
+  mlruns-data:
+  logs-data:
+  artifacts-data:
