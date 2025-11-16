@@ -11,6 +11,9 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, A
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import mlflow
+import mlflow.sklearn
+from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -32,6 +35,10 @@ class ModelTrainerConfig:
     
     # Performance threshold
     expected_r2_score: float = 0.6  # Minimum acceptable R² score
+    
+    # MLflow settings
+    mlflow_tracking_uri: str = "mlruns"
+    mlflow_experiment_name: str = "Customer_Spending_Prediction"
 
 
 class ModelTrainer:
@@ -65,6 +72,11 @@ class ModelTrainer:
         """
         self.config = config if config else ModelTrainerConfig()
         logger.info("ModelTrainer component initialized")
+        
+        # Setup MLflow
+        mlflow.set_tracking_uri(self.config.mlflow_tracking_uri)
+        mlflow.set_experiment(self.config.mlflow_experiment_name)
+        logger.info(f"MLflow tracking enabled: {self.config.mlflow_experiment_name}")
     
     def get_models(self) -> Dict:
         """
@@ -118,7 +130,7 @@ class ModelTrainer:
     def train_and_evaluate_models(self, X_train: np.ndarray, y_train: np.ndarray,
                                    X_test: np.ndarray, y_test: np.ndarray) -> pd.DataFrame:
         """
-        Train and evaluate all models
+        Train and evaluate all models with MLflow tracking
         
         Args:
             X_train: Training features
@@ -134,51 +146,87 @@ class ModelTrainer:
             results = []
             
             logger.info("=" * 80)
-            logger.info("MODEL TRAINING AND EVALUATION STARTED")
+            logger.info("MODEL TRAINING AND EVALUATION STARTED (with MLflow tracking)")
             logger.info("=" * 80)
             
-            for model_name, model in models.items():
-                try:
-                    logger.info(f"\nTraining {model_name}...")
-                    
-                    # Train model
-                    model.fit(X_train, y_train)
-                    
-                    # Predictions
-                    y_train_pred = model.predict(X_train)
-                    y_test_pred = model.predict(X_test)
-                    
-                    # Evaluate on training set
-                    train_metrics = self.evaluate_model(y_train, y_train_pred)
-                    
-                    # Evaluate on test set
-                    test_metrics = self.evaluate_model(y_test, y_test_pred)
-                    
-                    # Store results
-                    results.append({
-                        'Model': model_name,
-                        'Train_RMSE': train_metrics['RMSE'],
-                        'Train_MAE': train_metrics['MAE'],
-                        'Train_R2': train_metrics['R2'],
-                        'Test_RMSE': test_metrics['RMSE'],
-                        'Test_MAE': test_metrics['MAE'],
-                        'Test_R2': test_metrics['R2']
-                    })
-                    
-                    logger.info(f"{model_name} - Test R²: {test_metrics['R2']:.4f}, "
-                              f"Test RMSE: ${test_metrics['RMSE']:.2f}")
-                    
-                except Exception as e:
-                    logger.warning(f"Failed to train {model_name}: {str(e)}")
-                    continue
-            
-            # Create DataFrame and sort by Test R2
-            report_df = pd.DataFrame(results)
-            report_df = report_df.sort_values('Test_R2', ascending=False)
-            
-            logger.info("=" * 80)
-            logger.info("MODEL TRAINING COMPLETED")
-            logger.info("=" * 80)
+            # Start parent MLflow run
+            with mlflow.start_run(run_name=f"Training_Pipeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+                
+                # Log dataset info
+                mlflow.log_param("train_samples", X_train.shape[0])
+                mlflow.log_param("test_samples", X_test.shape[0])
+                mlflow.log_param("n_features", X_train.shape[1])
+                
+                for model_name, model in models.items():
+                    try:
+                        logger.info(f"\nTraining {model_name}...")
+                        
+                        # Start child run for each model
+                        with mlflow.start_run(run_name=model_name, nested=True):
+                            
+                            # Log model type
+                            mlflow.log_param("model_type", model_name)
+                            mlflow.log_param("model_class", model.__class__.__name__)
+                            
+                            # Train model
+                            model.fit(X_train, y_train)
+                            
+                            # Predictions
+                            y_train_pred = model.predict(X_train)
+                            y_test_pred = model.predict(X_test)
+                            
+                            # Evaluate on training set
+                            train_metrics = self.evaluate_model(y_train, y_train_pred)
+                            
+                            # Evaluate on test set
+                            test_metrics = self.evaluate_model(y_test, y_test_pred)
+                            
+                            # Log metrics to MLflow
+                            mlflow.log_metrics({
+                                "train_rmse": train_metrics['RMSE'],
+                                "train_mae": train_metrics['MAE'],
+                                "train_r2": train_metrics['R2'],
+                                "test_rmse": test_metrics['RMSE'],
+                                "test_mae": test_metrics['MAE'],
+                                "test_r2": test_metrics['R2']
+                            })
+                            
+                            # Log model to MLflow
+                            mlflow.sklearn.log_model(model, "model")
+                            
+                            # Store results
+                            results.append({
+                                'Model': model_name,
+                                'Train_RMSE': train_metrics['RMSE'],
+                                'Train_MAE': train_metrics['MAE'],
+                                'Train_R2': train_metrics['R2'],
+                                'Test_RMSE': test_metrics['RMSE'],
+                                'Test_MAE': test_metrics['MAE'],
+                                'Test_R2': test_metrics['R2']
+                            })
+                            
+                            logger.info(f"{model_name} - Test R²: {test_metrics['R2']:.4f}, "
+                                      f"Test RMSE: ${test_metrics['RMSE']:.2f}")
+                            logger.info(f"✓ Logged to MLflow: {model_name}")
+                        
+                    except Exception as e:
+                        logger.warning(f"Failed to train {model_name}: {str(e)}")
+                        continue
+                
+                # Create DataFrame and sort by Test R2
+                report_df = pd.DataFrame(results)
+                report_df = report_df.sort_values('Test_R2', ascending=False)
+                
+                # Log best model info
+                best_model_name = report_df.iloc[0]['Model']
+                best_r2 = report_df.iloc[0]['Test_R2']
+                mlflow.log_param("best_model", best_model_name)
+                mlflow.log_metric("best_test_r2", best_r2)
+                
+                logger.info("=" * 80)
+                logger.info("MODEL TRAINING COMPLETED")
+                logger.info(f"All experiments logged to MLflow experiment: {self.config.mlflow_experiment_name}")
+                logger.info("=" * 80)
             
             return report_df
             
