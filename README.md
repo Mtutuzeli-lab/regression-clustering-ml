@@ -344,22 +344,41 @@ regression-clustering-ml/
 
 ### Quick Start
 
-1. **Data Exploration**:
+1. **Run Complete ML Pipeline**:
    ```bash
-   jupyter notebook notebooks/01_data_exploration.ipynb
+   python pipeline.py
+   ```
+   This will:
+   - Ingest data and create train/test splits
+   - Transform features with StandardScaler
+   - Train 10 regression models
+   - Select best model (Ridge - 97.79% R²)
+   - Save all artifacts to `artifacts/` folder
+
+2. **Train Clustering Model**:
+   ```bash
+   python train_clustering.py
+   ```
+   This creates customer segmentation artifacts needed for the app.
+
+3. **Launch Streamlit Web App** 🚀:
+   ```bash
+   streamlit run app.py
+   ```
+   Then open http://localhost:8501 in your browser.
+   
+   **App Features**:
+   - 💰 **Spending Prediction**: Predict customer yearly spending ($)
+   - 👥 **Customer Segmentation**: Identify customer segments
+   - 📊 **Batch Prediction**: Upload CSV for bulk predictions
+   - 📈 **Interactive Dashboard**: Real-time visualizations
+
+4. **Data Exploration (Optional)**:
+   ```bash
+   jupyter notebook notebooks/03_Customer_Segmentation.ipynb
    ```
 
-2. **Model Training**:
-   ```bash
-   python src/model_training.py
-   ```
-
-3. **Launch Streamlit App**:
-   ```bash
-   streamlit run streamlit_app/app.py
-   ```
-
-4. **View MLflow UI**:
+5. **View MLflow UI (Optional)**:
    ```bash
    mlflow ui
    ```

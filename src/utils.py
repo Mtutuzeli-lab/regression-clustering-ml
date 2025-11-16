@@ -57,7 +57,7 @@ def load_object(file_path):
     """
     try:
         with open(file_path, 'rb') as file_obj:
-            obj = pickle.load(file_obj)
+            obj = pickle.load(file_obj, encoding='latin1')
             
         logging.info(f"Object loaded successfully from {file_path}")
         return obj
