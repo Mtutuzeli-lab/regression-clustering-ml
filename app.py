@@ -188,6 +188,14 @@ elif app_mode == "💰 Spending Prediction":
     st.markdown("## Customer Spending Prediction")
     st.write("Enter customer behavior metrics to predict their yearly spending")
     
+    # Model selection
+    st.markdown("### 🤖 Select Prediction Model")
+    model_type = st.selectbox(
+        "Choose Model Type",
+        ["Classical ML (Ridge Regression)", "Deep Learning - Simple ANN", "Deep Learning - Deep ANN", "Deep Learning - Wide & Deep"],
+        help="Select between classical ML and deep learning models"
+    )
+    
     # Load pipeline
     try:
         regression_pipeline = load_regression_pipeline()
@@ -247,9 +255,31 @@ elif app_mode == "💰 Spending Prediction":
                     length_of_membership=length_of_membership
                 )
                 
-                # Get prediction
+                # Get prediction based on model type
                 features_df = custom_data.get_data_as_dataframe()
-                prediction = regression_pipeline.predict(features_df)
+                
+                if "Deep Learning" in model_type:
+                    # Load deep learning model
+                    import tensorflow as tf
+                    from tensorflow import keras
+                    
+                    model_map = {
+                        "Deep Learning - Simple ANN": "models/deep_learning/Simple_ANN_best.keras",
+                        "Deep Learning - Deep ANN": "models/deep_learning/Deep_ANN_best.keras",
+                        "Deep Learning - Wide & Deep": "models/deep_learning/Wide_Deep_best.keras"
+                    }
+                    
+                    model_path = model_map[model_type]
+                    dl_model = keras.models.load_model(model_path)
+                    
+                    # Preprocess features (standardize using the same preprocessor)
+                    features_scaled = regression_pipeline.preprocessor.transform(features_df)
+                    
+                    # Make prediction
+                    prediction = dl_model.predict(features_scaled, verbose=0)[0][0]
+                else:
+                    # Classical ML prediction
+                    prediction = regression_pipeline.predict(features_df)
                 
                 # Display prediction
                 st.markdown(
