@@ -405,6 +405,71 @@ elif app_mode == "👥 Customer Segmentation":
                     # Cluster number
                     st.metric("Cluster ID", f"Cluster {cluster_result['cluster']}")
                     
+                    # Visualize all clusters
+                    st.markdown("---")
+                    st.markdown("### 📊 All Customer Segments Visualization")
+                    
+                    try:
+                        # Load full dataset for visualization
+                        import os
+                        data_path = os.path.join('data', 'ecommerce_customer.csv')
+                        if os.path.exists(data_path):
+                            full_data = pd.read_csv(data_path)
+                            
+                            # Load cluster labels
+                            cluster_labels_path = os.path.join('artifacts', 'cluster_labels.pkl')
+                            if os.path.exists(cluster_labels_path):
+                                import joblib
+                                cluster_labels = joblib.load(cluster_labels_path)
+                                full_data['Cluster'] = cluster_labels
+                                
+                                # Create 3D scatter plot
+                                fig = px.scatter_3d(
+                                    full_data,
+                                    x='Avg. Session Length',
+                                    y='Time on App',
+                                    z='Yearly Amount Spent',
+                                    color='Cluster',
+                                    title='Customer Segments in 3D Space',
+                                    labels={'Cluster': 'Segment'},
+                                    color_continuous_scale='Viridis',
+                                    height=600
+                                )
+                                
+                                # Add the current customer point
+                                fig.add_scatter3d(
+                                    x=[avg_session_length],
+                                    y=[time_on_app],
+                                    z=[500],  # Approximate spending
+                                    mode='markers',
+                                    marker=dict(size=15, color='red', symbol='diamond'),
+                                    name='Your Customer',
+                                    showlegend=True
+                                )
+                                
+                                st.plotly_chart(fig, use_container_width=True)
+                                
+                                # Cluster distribution
+                                st.markdown("### 📈 Cluster Distribution")
+                                cluster_counts = pd.DataFrame(full_data['Cluster'].value_counts()).reset_index()
+                                cluster_counts.columns = ['Cluster', 'Count']
+                                
+                                fig2 = px.bar(
+                                    cluster_counts,
+                                    x='Cluster',
+                                    y='Count',
+                                    title='Number of Customers per Segment',
+                                    color='Count',
+                                    color_continuous_scale='Blues'
+                                )
+                                st.plotly_chart(fig2, use_container_width=True)
+                            else:
+                                st.info("Cluster labels not found. Run the clustering pipeline first.")
+                        else:
+                            st.info("Full dataset not available for visualization.")
+                    except Exception as viz_error:
+                        st.warning(f"Could not load cluster visualization: {str(viz_error)}")
+                    
                 else:
                     st.warning(cluster_result.get('error', 'Clustering model not available'))
                     st.info("Train the clustering model first by running the customer segmentation notebook.")
